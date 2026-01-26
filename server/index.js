@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { spawn } from 'child_process';
 import db from './db.js';
-import authRoutes, { requireAuth } from './auth-routes.js';
+import authRoutes, { requireAuth, requireAdmin } from './auth-routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,7 +10,8 @@ const PORT = process.env.PORT || 3001;
 // Sync lock to prevent concurrent syncs
 let syncInProgress = false;
 
-app.use(cors());
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://estate.intellisoft.software';
+app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 
 // Auth routes (public)
@@ -268,8 +269,8 @@ app.get('/api/sync/status', (req, res) => {
   }
 });
 
-// Trigger manual sync (in background)
-app.post('/api/sync', async (req, res) => {
+// Trigger manual sync (in background) - admin only
+app.post('/api/sync', requireAuth, requireAdmin, async (req, res) => {
   if (syncInProgress) {
     return res.status(409).json({ error: 'Sync already in progress. Please wait for it to complete.' });
   }
@@ -300,8 +301,8 @@ app.post('/api/sync', async (req, res) => {
   }
 });
 
-// Trigger quick sync (active statuses only) - faster
-app.post('/api/sync/quick', async (req, res) => {
+// Trigger quick sync (active statuses only) - faster (admin only)
+app.post('/api/sync/quick', requireAuth, requireAdmin, async (req, res) => {
   if (syncInProgress) {
     return res.status(409).json({ error: 'Sync already in progress. Please wait for it to complete.' });
   }
