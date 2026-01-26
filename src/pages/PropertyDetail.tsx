@@ -27,7 +27,7 @@ import { Slider } from "@/components/ui/slider";
 import { LastUpdated } from "@/components/dashboard/LastUpdated";
 import { useProperties } from "@/hooks/useProperties";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 // Haversine formula to calculate distance between two lat/lng points in miles
 function getDistanceMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {

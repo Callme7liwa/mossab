@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { SimpleProperty, MarketStats, FetchPropertiesOptions } from "@/types/property";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 interface UsePropertiesOptions extends FetchPropertiesOptions {
   skipCache?: boolean;

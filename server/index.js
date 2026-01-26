@@ -378,8 +378,10 @@ async function triggerQuickSync() {
   }
 }
 
-app.listen(PORT, () => {
-  console.log(`🏠 Aura Estates API running on http://localhost:${PORT}`);
+const HOST = process.env.HOST || '127.0.0.1';
+
+app.listen(PORT, HOST, () => {
+  console.log(`🏠 Aura Estates API running on http://${HOST}:${PORT}`);
   
   // Show database stats
   const stats = db.prepare('SELECT COUNT(*) as count FROM properties').get();
