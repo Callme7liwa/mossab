@@ -66,8 +66,8 @@ sudo npm install -g pm2
 
 ```bash
 cd /home/ubuntu
-git clone https://github.com/your-org/aura-estates-insight.git
-cd aura-estates-insight
+git clone https://github.com/your-org/data-analytics-re.git
+cd data-analytics-re
 
 # Install frontend dev deps
 npm install
@@ -109,7 +109,7 @@ After updating `.env.production`, rebuild the frontend (below).
 Back at repo root:
 
 ```bash
-# From /home/ubuntu/aura-estates-insight
+# From /home/ubuntu/data-analytics-re
 npm run build
 # This produces `dist/`
 ```
@@ -118,12 +118,12 @@ npm run build
 
 ## Step 6 — PM2 config and start backend + scheduler
 
-The repo includes a ready-to-use PM2 ecosystem file at `server/ecosystem.config.cjs`. You may need to update the paths if deploying to a different location than `/home/ubuntu/aura-estates-insight`.
+The repo includes a ready-to-use PM2 ecosystem file at `server/ecosystem.config.cjs`. You may need to update the paths if deploying to a different location than `/home/ubuntu/data-analytics-re`.
 
 Start apps with PM2:
 
 ```bash
-cd /home/ubuntu/aura-estates-insight
+cd /home/ubuntu/data-analytics-re
 pm2 start server/ecosystem.config.cjs
 pm2 save
 pm2 startup # follow the printed instruction to enable pm2 on boot
@@ -140,7 +140,7 @@ pm2 logs aura-backend
 ```bash
 crontab -e
 # Add this line to run sync every 6 hours:
-0 */6 * * * cd /home/ubuntu/aura-estates-insight/server && /usr/bin/node quick-sync.js >> ./logs/sync-cron.log 2>&1
+0 */6 * * * cd /home/ubuntu/data-analytics-re/server && /usr/bin/node quick-sync.js >> ./logs/sync-cron.log 2>&1
 ```
 
 ---
@@ -153,7 +153,7 @@ The repo includes nginx configuration templates in `deploy/`:
 
 Copy the appropriate template to `/etc/nginx/sites-available/aura` and customize the domain name:
 
-```bash\n# For HTTPS setup:\nsudo cp /home/ubuntu/aura-estates-insight/deploy/nginx-site.conf /etc/nginx/sites-available/aura\n\n# OR for HTTP-only testing:\nsudo cp /home/ubuntu/aura-estates-insight/deploy/nginx-http-only.conf /etc/nginx/sites-available/aura\n\n# Edit the domain name:\nsudo nano /etc/nginx/sites-available/aura\n# Replace 'your-domain.com' with your actual domain\n```\n\nEnable and test:
+```bash\n# For HTTPS setup:\nsudo cp /home/ubuntu/data-analytics-re/deploy/nginx-site.conf /etc/nginx/sites-available/aura\n\n# OR for HTTP-only testing:\nsudo cp /home/ubuntu/data-analytics-re/deploy/nginx-http-only.conf /etc/nginx/sites-available/aura\n\n# Edit the domain name:\nsudo nano /etc/nginx/sites-available/aura\n# Replace 'your-domain.com' with your actual domain\n```\n\nEnable and test:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/aura /etc/nginx/sites-enabled/
@@ -183,8 +183,8 @@ After certbot runs, revisit `/etc/nginx/sites-available/aura` and ensure the SSL
 - Set strict permissions on `.env`:
 
 ```bash
-sudo chown ubuntu:ubuntu /home/ubuntu/aura-estates-insight/server/.env
-chmod 600 /home/ubuntu/aura-estates-insight/server/.env
+sudo chown ubuntu:ubuntu /home/ubuntu/data-analytics-re/server/.env
+chmod 600 /home/ubuntu/data-analytics-re/server/.env
 ```
 
 - Configure UFW (firewall):
@@ -205,7 +205,7 @@ sudo ufw enable
 The repo includes a deployment update script at `deploy/update-deploy.sh`. Copy it to your home directory:
 
 ```bash
-cp /home/ubuntu/aura-estates-insight/deploy/update-deploy.sh /home/ubuntu/
+cp /home/ubuntu/data-analytics-re/deploy/update-deploy.sh /home/ubuntu/
 chmod +x /home/ubuntu/update-deploy.sh
 ```
 
