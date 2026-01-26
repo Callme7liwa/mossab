@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'aura-backend',
-      cwd: '/home/ubuntu/aura-estates-insight/server',
+      cwd: '/home/ubuntu/data-analytics-re/server',
       script: 'index.js',
       instances: 1,
       exec_mode: 'fork',
