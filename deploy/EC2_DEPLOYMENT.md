@@ -118,13 +118,17 @@ npm run build
 
 ## Step 6 — PM2 config and start backend + scheduler
 
-The repo includes a ready-to-use PM2 ecosystem file at `server/ecosystem.config.cjs`. You may need to update the paths if deploying to a different location than `/home/ubuntu/data-analytics-re`.
+The repo includes a ready-to-use PM2 ecosystem file at `server/ecosystem.config.cjs`. You may need to update the paths if deploying to a different location than `/home/ubuntu/aura-estates-insight`.
 
-Start apps with PM2:
+**Important**: PM2's `env_file` option can be unreliable. Instead, load environment variables manually:
 
 ```bash
-cd /home/ubuntu/data-analytics-re
-pm2 start server/ecosystem.config.cjs
+cd /home/ubuntu/aura-estates-insight/server
+
+# Load environment variables and start PM2
+source .env
+export BRIDGE_API_TOKEN
+pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup # follow the printed instruction to enable pm2 on boot
 ```
@@ -140,7 +144,7 @@ pm2 logs aura-backend
 ```bash
 crontab -e
 # Add this line to run sync every 6 hours:
-0 */6 * * * cd /home/ubuntu/data-analytics-re/server && /usr/bin/node quick-sync.js >> ./logs/sync-cron.log 2>&1
+0 */6 * * * cd /home/ubuntu/aura-estates-insight/server && source .env && export BRIDGE_API_TOKEN && /usr/bin/node quick-sync.js >> ./logs/sync-cron.log 2>&1
 ```
 
 ---

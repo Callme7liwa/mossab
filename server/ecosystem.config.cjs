@@ -6,7 +6,10 @@ module.exports = {
       script: 'index.js',
       instances: 1,
       exec_mode: 'fork',
-      env_file: '.env',
+      env: {
+        PORT: 3001,
+        BRIDGE_API_TOKEN: process.env.BRIDGE_API_TOKEN
+      },
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
