@@ -7,7 +7,7 @@ import db from './db.js';
 const strategy = process.argv[2] || 'upsert';
 
 const API_BASE = 'https://api.bridgedataoutput.com/api/v2/OData/shared_mlspin_0705dd4';
-const API_TOKEN = '725919c8f3653746355154239821a3b1';
+const API_TOKEN = process.env.BRIDGE_API_TOKEN || (() => { throw new Error('BRIDGE_API_TOKEN environment variable not set'); })();
 
 const TOWNS = ['Weston', 'Wellesley', 'Newton', 'Needham', 'Dover', 'Natick', 'Westwood'];
 const ACTIVE_STATUSES = ['Active', 'Pending', 'Active Under Contract', 'Withdrawn'];
