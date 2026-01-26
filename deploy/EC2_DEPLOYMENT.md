@@ -118,13 +118,13 @@ npm run build
 
 ## Step 6 — PM2 config and start backend + scheduler
 
-The repo includes a ready-to-use PM2 ecosystem file at `server/ecosystem.config.js`. You may need to update the paths if deploying to a different location than `/home/ubuntu/aura-estates-insight`.
+The repo includes a ready-to-use PM2 ecosystem file at `server/ecosystem.config.cjs`. You may need to update the paths if deploying to a different location than `/home/ubuntu/aura-estates-insight`.
 
 Start apps with PM2:
 
 ```bash
 cd /home/ubuntu/aura-estates-insight
-pm2 start server/ecosystem.config.js
+pm2 start server/ecosystem.config.cjs
 pm2 save
 pm2 startup # follow the printed instruction to enable pm2 on boot
 ```
@@ -135,7 +135,13 @@ pm2 status
 pm2 logs aura-backend
 ```
 
-Note: If you'd rather use cron instead of pm2 cron_restart, add a system crontab entry to call `node /home/ubuntu/aura-estates-insight/server/quick-sync.js` every 6 hours.
+**For the sync scheduler**: PM2's cron_restart can be unreliable. Instead, set up a system cron job:
+
+```bash
+crontab -e
+# Add this line to run sync every 6 hours:
+0 */6 * * * cd /home/ubuntu/aura-estates-insight/server && /usr/bin/node quick-sync.js >> ./logs/sync-cron.log 2>&1
+```
 
 ---
 
