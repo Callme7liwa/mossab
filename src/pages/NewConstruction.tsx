@@ -96,7 +96,7 @@ export default function NewConstruction() {
   // Separate query for Match Review - always gets ALL permits
   const { data: allPermitsData, isLoading: allPermitsLoading } = useQuery({
     queryKey: ['permits-all-for-review'],
-    queryFn: () => permitsApi.list({ limit: 2000 }),
+    queryFn: () => permitsApi.list({ limit: 10000 }),
   });
 
   // Mutations
@@ -679,7 +679,7 @@ function PermitsTab({
                     <TableCell className="max-w-[200px] truncate" title={permit.address}>
                       {permit.address || '—'}
                     </TableCell>
-                    <TableCell>{formatDate(permit.date_submitted)}</TableCell>
+                    <TableCell>{permit.date_submitted ? formatDate(permit.date_submitted) : permit.year || '—'}</TableCell>
                     <TableCell>{formatCurrency(permit.estimated_cost)}</TableCell>
                     <TableCell>
                       <Badge variant={permit.record_status === 'Active' ? 'default' : 'secondary'}>
@@ -946,7 +946,7 @@ function AnalyticsTab({ analytics, isLoading }: { analytics?: PermitAnalytics; i
                 {analytics?.details.map((row, idx) => (
                   <TableRow key={`detail-${row.id}-${idx}`}>
                     <TableCell className="max-w-[150px] truncate">{row.address}</TableCell>
-                    <TableCell>{formatDate(row.date_submitted)}</TableCell>
+                    <TableCell>{row.date_submitted ? formatDate(row.date_submitted) : row.year || '—'}</TableCell>
                     <TableCell>{formatCurrency(row.estimated_cost)}</TableCell>
                     <TableCell>{formatDate(row.mls_list_date)}</TableCell>
                     <TableCell>{formatDate(row.mls_settled_date)}</TableCell>
@@ -1032,7 +1032,7 @@ function MatchReviewTab({
                   {unmatchedPermits.slice(0, 50).map((permit, idx) => (
                     <TableRow key={`unmatched-${permit.id}-${idx}`}>
                       <TableCell>{permit.address}</TableCell>
-                      <TableCell>{formatDate(permit.date_submitted)}</TableCell>
+                      <TableCell>{permit.date_submitted ? formatDate(permit.date_submitted) : permit.year || '—'}</TableCell>
                       <TableCell>{permit.applicant_name || permit.owner_name || '—'}</TableCell>
                       <TableCell>
                         <ManualMatchButton permitId={permit.id} queryClient={queryClient} />
@@ -1276,7 +1276,7 @@ function ReviewMatchButton({ permit, queryClient }: { permit: Permit; queryClien
               <h4 className="font-medium mb-2">Permit Details</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div><span className="text-muted-foreground">Record #:</span> {data?.permit.record_no}</div>
-                <div><span className="text-muted-foreground">Date:</span> {formatDate(data?.permit.date_submitted)}</div>
+                <div><span className="text-muted-foreground">Date:</span> {data?.permit.date_submitted ? formatDate(data?.permit.date_submitted) : data?.permit.year || '—'}</div>
                 <div><span className="text-muted-foreground">Builder:</span> {data?.permit.applicant_name || data?.permit.owner_name}</div>
                 <div><span className="text-muted-foreground">Est. Cost:</span> {formatCurrency(data?.permit.estimated_cost)}</div>
               </div>
@@ -1406,7 +1406,7 @@ function PermitDetailDialog({
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">Date Submitted</span>
-                <p className="font-medium">{formatDate(data?.permit.date_submitted)}</p>
+                <p className="font-medium">{data?.permit.date_submitted ? formatDate(data?.permit.date_submitted) : data?.permit.year || '—'}</p>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">Estimated Cost</span>

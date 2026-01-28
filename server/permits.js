@@ -240,8 +240,10 @@ router.get('/', (req, res) => {
     }
     
     if (year) {
-      sql += ` AND strftime('%Y', p.date_submitted) = ?`;
-      params.push(year);
+      // Use COALESCE to check both year column (from PDF as integer) and date_submitted (from Excel)
+      // Cast year to TEXT to compare with strftime result
+      sql += ` AND COALESCE(CAST(p.year AS TEXT), strftime('%Y', p.date_submitted)) = ?`;
+      params.push(String(year));
     }
     
     if (propertyType) {
@@ -255,7 +257,8 @@ router.get('/', (req, res) => {
       sql += ' AND (SELECT COUNT(*) FROM permit_mls_matches WHERE permit_id = p.id) = 0';
     }
     
-    sql += ' ORDER BY p.date_submitted DESC LIMIT ?';
+    // Sort by year (prefer date_submitted if available, otherwise use year column)
+    sql += " ORDER BY COALESCE(p.date_submitted, CAST(p.year AS TEXT) || '-01-01') DESC LIMIT ?";
     params.push(parseInt(limit));
     
     const permits = db.prepare(sql).all(...params);
@@ -272,10 +275,10 @@ router.get('/stats', (req, res) => {
     const stats = {
       total: db.prepare('SELECT COUNT(*) as count FROM permits').get().count,
       byYear: db.prepare(`
-        SELECT COALESCE(year, strftime('%Y', date_submitted)) as year, COUNT(*) as count 
+        SELECT COALESCE(CAST(year AS TEXT), strftime('%Y', date_submitted)) as year, COUNT(*) as count 
         FROM permits 
         WHERE year IS NOT NULL OR date_submitted IS NOT NULL 
-        GROUP BY COALESCE(year, strftime('%Y', date_submitted)) 
+        GROUP BY COALESCE(CAST(year AS TEXT), strftime('%Y', date_submitted)) 
         ORDER BY year DESC
       `).all(),
       byStatus: db.prepare(`
@@ -381,13 +384,13 @@ router.get('/analytics', (req, res) => {
     // By year breakdown - use year column (from PDF) or date_submitted (from Excel)
     const byYear = db.prepare(`
       SELECT 
-        COALESCE(p.year, strftime('%Y', p.date_submitted)) as permit_year,
+        COALESCE(CAST(p.year AS TEXT), strftime('%Y', p.date_submitted)) as permit_year,
         COUNT(DISTINCT p.id) as permits,
         COUNT(CASE WHEN m.mls_settled_date IS NOT NULL THEN 1 END) as sales,
         AVG(CASE WHEN m.mls_sale_price > 0 THEN m.mls_sale_price END) as avg_sale_price,
         AVG(CASE WHEN p.estimated_cost > 0 THEN p.estimated_cost END) as avg_construction_cost,
         AVG(CASE WHEN m.mls_settled_date IS NOT NULL 
-                 THEN julianday(m.mls_settled_date) - COALESCE(julianday(p.date_submitted), julianday(p.year || '-06-15'))
+                 THEN julianday(m.mls_settled_date) - COALESCE(julianday(p.date_submitted), julianday(CAST(p.year AS TEXT) || '-06-15'))
             END) as avg_days_to_sale
       FROM permits p
       LEFT JOIN permit_mls_matches m ON m.permit_id = p.id
