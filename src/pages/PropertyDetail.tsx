@@ -69,7 +69,10 @@ export default function PropertyDetail() {
     if (!id) return;
     
     setHistoryLoading(true);
-    fetch(`${BACKEND_URL}/api/properties/${id}/history`)
+    const token = localStorage.getItem('authToken');
+    fetch(`${BACKEND_URL}/api/properties/${id}/history`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
       .then(res => res.json())
       .then(data => {
         if (data.history && data.history.length > 1) {

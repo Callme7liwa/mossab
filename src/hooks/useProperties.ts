@@ -41,20 +41,38 @@ export function useProperties(options: UsePropertiesOptions = {}): UseProperties
         // Build query parameters for backend
         const params = new URLSearchParams();
         
-        if (fetchOptions.filter) {
-          // Parse filter to extract status
+        // Use direct status parameter if provided, otherwise parse from filter
+        if ((fetchOptions as any).status) {
+          params.append('status', (fetchOptions as any).status);
+        } else if (fetchOptions.filter) {
+          // Parse filter to extract status (legacy support)
           const statusMatch = fetchOptions.filter.match(/StandardStatus eq '([^']+)'/);
           if (statusMatch) {
             params.append('status', statusMatch[1]);
           }
         }
         
+        if ((fetchOptions as any).propertyType) {
+          params.append('propertyType', (fetchOptions as any).propertyType);
+        }
+
+        if ((fetchOptions as any).town) {
+          params.append('city', (fetchOptions as any).town);
+        }
+
+        if ((fetchOptions as any).timeframe) {
+          params.append('timeframe', (fetchOptions as any).timeframe);
+        }
+
         if (fetchOptions.top) {
           params.append('limit', fetchOptions.top.toString());
         }
 
         // Fetch from backend
-        const response = await fetch(`${BACKEND_URL}/api/properties?${params}`);
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${BACKEND_URL}/api/properties?${params}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -64,17 +82,22 @@ export function useProperties(options: UsePropertiesOptions = {}): UseProperties
 
         // Calculate stats with proper rounding
         const validProperties = properties.filter((p: any) => p.price > 0);
+        // Calculate median for all metrics
+        const sortedPrices = validProperties.map((p: any) => p.price).sort((a, b) => a - b);
+        const sortedPricePerSqft = validProperties.map((p: any) => p.price / (p.sqft || 1)).filter(v => !isNaN(v) && isFinite(v)).sort((a, b) => a - b);
+        const sortedDOM = validProperties.map((p: any) => p.dom || 0).filter(d => d >= 0).sort((a, b) => a - b);
+        
+        const getMedian = (arr: number[]) => {
+          if (arr.length === 0) return 0;
+          const mid = Math.floor(arr.length / 2);
+          return arr.length % 2 === 0 ? (arr[mid - 1] + arr[mid]) / 2 : arr[mid];
+        };
+
         const stats: MarketStats = {
           totalInventory: validProperties.length,
-          medianPrice: validProperties.length > 0
-            ? Math.round(validProperties.sort((a: any, b: any) => a.price - b.price)[Math.floor(validProperties.length / 2)]?.price || 0)
-            : 0,
-          avgPricePerSqft: validProperties.length > 0
-            ? Math.round(validProperties.reduce((sum: number, p: any) => sum + (p.price / (p.sqft || 1)), 0) / validProperties.length)
-            : 0,
-          avgDaysOnMarket: validProperties.length > 0
-            ? Math.round(validProperties.reduce((sum: number, p: any) => sum + (p.dom || 0), 0) / validProperties.length)
-            : 0,
+          medianPrice: Math.round(getMedian(sortedPrices)),
+          avgPricePerSqft: Math.round(getMedian(sortedPricePerSqft)),
+          avgDaysOnMarket: Math.round(getMedian(sortedDOM)),
         };
 
         setProperties(properties);

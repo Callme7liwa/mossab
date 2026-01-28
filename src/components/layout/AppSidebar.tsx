@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   XCircle,
   BarChart3,
+  HardHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,14 +31,14 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
+    title: "Town Level Analysis",
+    path: "/neighborhoods",
+    icon: MapPin,
+  },
+  {
     title: "Property Analysis",
     path: "/property-analysis",
     icon: Building2,
-  },
-  {
-    title: "Neighborhoods",
-    path: "/neighborhoods",
-    icon: MapPin,
   },
   {
     title: "Market Opportunities",
@@ -45,19 +46,24 @@ const navItems = [
     icon: TrendingDown,
   },
   {
-    title: "Portfolio Tracker",
-    path: "/portfolio",
-    icon: Briefcase,
-  },
-  {
     title: "Financial Forecaster",
     path: "/financial-forecaster",
     icon: Calculator,
   },
   {
+    title: "Portfolio Tracker",
+    path: "/portfolio",
+    icon: Briefcase,
+  },
+  {
     title: "Reports",
     path: "/reports",
     icon: FileText,
+  },
+  {
+    title: "New Construction Tracker",
+    path: "/new-construction",
+    icon: HardHat,
   },
   {
     title: "Admin Dashboard",
@@ -68,34 +74,36 @@ const navItems = [
 
 // Jennifer's Insight Dashboards
 const insightItems = [
-  // {
-  //   title: "Active Insights",
-  //   path: "/insights/active",
-  //   icon: Activity,
-  // },
-  // {
-  //   title: "Pending Insights",
-  //   path: "/insights/pending",
-  //   icon: Clock,
-  // },
-  // {
-  //   title: "Sold Analytics",
-  //   path: "/insights/sold",
-  //   icon: CheckCircle2,
-  // },
-  // {
-  //   title: "Under Contract",
-  //   path: "/insights/contingent",
-  //   icon: AlertTriangle,
-  // },
-  // {
-  //   title: "Withdrawn Analysis",
-  //   path: "/insights/withdrawn",
-  //   icon: XCircle,
-  // },
+  {
+    title: "Active Insights",
+    path: "/insights/active",
+    icon: Activity,
+  },
+  {
+    title: "Pending Insights",
+    path: "/insights/pending",
+    icon: Clock,
+  },
+  {
+    title: "Sold Analytics",
+    path: "/insights/sold",
+    icon: CheckCircle2,
+  },
+  {
+    title: "Under Contract",
+    path: "/insights/contingent",
+    icon: AlertTriangle,
+  },
+  {
+    title: "Withdrawn Analysis",
+    path: "/insights/withdrawn",
+    icon: XCircle,
+  },
 ];
 
 export function AppSidebar() {
+  const appName = (import.meta.env.VITE_APP_NAME as string) || "Aura Estates";
+  const appTag = (import.meta.env.VITE_APP_TAGLINE as string) || "Intelligence";
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const [user] = useState(() => {
@@ -116,9 +124,17 @@ export function AppSidebar() {
     >
       {/* Logo Section */}
       <div className="flex items-center gap-3 px-4 py-6 border-b border-sidebar-border">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary">
-          <TrendingUp className="w-5 h-5 text-primary-foreground" />
-        </div>
+        {(import.meta.env.VITE_LOGO_URL as string) ? (
+          <img 
+            src={import.meta.env.VITE_LOGO_URL as string} 
+            alt="Logo" 
+            className="w-10 h-10 rounded-xl object-contain"
+          />
+        ) : (
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary">
+            <TrendingUp className="w-5 h-5 text-primary-foreground" />
+          </div>
+        )}
         {!collapsed && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -127,9 +143,9 @@ export function AppSidebar() {
             className="flex flex-col"
           >
             <span className="font-display font-bold text-lg text-sidebar-foreground">
-              Aura Estates
+              {appName}
             </span>
-            <span className="text-xs text-muted-foreground">Intelligence</span>
+            <span className="text-xs text-muted-foreground">{appTag}</span>
           </motion.div>
         )}
       </div>

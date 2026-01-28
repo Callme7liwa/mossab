@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LastUpdated } from "@/components/dashboard/LastUpdated";
 import { useProperties } from "@/hooks/useProperties";
+import StickyFilterBar from "@/components/ui/StickyFilterBar";
+import ReportDisclaimer from "@/components/ui/ReportDisclaimer";
 import {
   BarChart,
   Bar,
@@ -35,11 +37,15 @@ const CHART_COLORS = [
 ];
 
 export default function PriceDropTracker() {
+  const [filters, setFilters] = useState({ propertyType: 'All', town: 'All', status: 'Active', timeframe: '12m' });
   // Show Active listings to find market opportunities
   const { properties, stats, loading, refetch, lastUpdated } = useProperties({ 
     top: 500,
-    filter: "StandardStatus eq 'Active'"
-  });
+    propertyType: filters.propertyType === 'All' ? undefined : filters.propertyType,
+    town: filters.town === 'All' ? undefined : filters.town,
+    status: filters.status === 'All' ? undefined : filters.status,
+    timeframe: filters.timeframe,
+  } as any);
 
   // Calculate market opportunities - properties priced below average $/sqft
   // This indicates potential value, though not necessarily actual price reductions
@@ -147,6 +153,16 @@ export default function PriceDropTracker() {
         </div>
       ) : (
         <>
+          <div className="mb-4">
+            <StickyFilterBar
+              towns={Array.from(new Set(properties.map(p => p.city || 'Wellesley')))}
+              propertyType={filters.propertyType}
+              town={filters.town}
+              status={filters.status}
+              timeframe={filters.timeframe}
+              onChange={(vals) => setFilters(prev => ({ ...prev, ...vals }))}
+            />
+          </div>
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <motion.div
@@ -358,6 +374,7 @@ export default function PriceDropTracker() {
           </motion.div>
         </>
       )}
+      <ReportDisclaimer />
     </div>
   );
 }

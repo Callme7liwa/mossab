@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { PropertyTable } from "@/components/analysis/PropertyTable";
 import { LastUpdated } from "@/components/dashboard/LastUpdated";
+import StickyFilterBar from "@/components/ui/StickyFilterBar";
 import { useProperties } from "@/hooks/useProperties";
+import ReportDisclaimer from "@/components/ui/ReportDisclaimer";
 import {
   PieChart,
   Pie,
@@ -12,7 +14,6 @@ import {
   Legend,
   Tooltip,
 } from "recharts";
-
 const CHART_COLORS = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
@@ -39,11 +40,15 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export default function PropertyAnalysis() {
+  const [filters, setFilters] = useState({ propertyType: 'All', town: 'All', status: 'Active', timeframe: '12m' });
   // Show Active listings for current market analysis
   const { properties, stats, loading, refetch, lastUpdated } = useProperties({ 
     top: 500,
-    filter: "StandardStatus eq 'Active'"
-  });
+    propertyType: filters.propertyType === 'All' ? undefined : filters.propertyType,
+    town: filters.town === 'All' ? undefined : filters.town,
+    status: filters.status === 'All' ? undefined : filters.status,
+    timeframe: filters.timeframe,
+  } as any);
 
   // Calculate property type distribution from live data
   const typeDistribution = useMemo(() => {
@@ -240,6 +245,7 @@ export default function PropertyAnalysis() {
           </div>
         </motion.div>
       </div>
+      <ReportDisclaimer />
     </div>
   );
 }

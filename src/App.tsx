@@ -22,6 +22,7 @@ import PendingInsights from "./pages/PendingInsights";
 import SoldAnalytics from "./pages/SoldAnalytics";
 import ContingentAnalysis from "./pages/ContingentAnalysis";
 import WithdrawnAnalysis from "./pages/WithdrawnAnalysis";
+import NewConstruction from "./pages/NewConstruction";
 
 // Protected Route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -89,6 +90,9 @@ const App = () => (
             <Route path="/insights/sold" element={<SoldAnalytics />} />
             <Route path="/insights/contingent" element={<ContingentAnalysis />} />
             <Route path="/insights/withdrawn" element={<WithdrawnAnalysis />} /> */}
+            
+            {/* New Construction Intelligence */}
+            <Route path="/new-construction" element={<NewConstruction />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

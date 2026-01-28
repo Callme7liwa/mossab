@@ -14,6 +14,7 @@ import {
   History,
   Home,
   Zap,
+  FileText,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,8 @@ export default function DataManagement() {
   const [multiListings, setMultiListings] = useState<MultiListingProperty[]>([]);
   const [dbStats, setDbStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [permitStats, setPermitStats] = useState<any>(null);
+  const [permitSyncing, setPermitSyncing] = useState(false);
 
   useEffect(() => {
     fetchAdminData();
@@ -66,16 +69,25 @@ export default function DataManagement() {
   const fetchAdminData = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('authToken');
+      const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
       // Fetch sync history
-      const syncRes = await fetch(`${BACKEND_URL}/api/sync/status`);
+      const syncRes = await fetch(`${BACKEND_URL}/api/sync/status`, {
+        headers: authHeaders,
+      });
       const syncData = await syncRes.json();
       
       // Fetch all sync logs
-      const historyRes = await fetch(`${BACKEND_URL}/api/stats`);
+      const historyRes = await fetch(`${BACKEND_URL}/api/stats`, {
+        headers: authHeaders,
+      });
       const statsData = await historyRes.json();
       
       // Fetch multiple listings
-      const multiRes = await fetch(`${BACKEND_URL}/api/analytics/multiple-listings`);
+      const multiRes = await fetch(`${BACKEND_URL}/api/analytics/multiple-listings`, {
+        headers: authHeaders,
+      });
       const multiData = await multiRes.json();
       
       if (syncData.lastSync) {
@@ -83,10 +95,76 @@ export default function DataManagement() {
       }
       setDbStats(statsData);
       setMultiListings(multiData.properties || []);
+      
+      // Fetch permit stats
+      try {
+        const permitRes = await fetch(`${BACKEND_URL}/api/sync/permits/status`, {
+          headers: authHeaders,
+        });
+        if (permitRes.ok) {
+          const permitData = await permitRes.json();
+          setPermitStats(permitData);
+          setPermitSyncing(permitData.inProgress);
+        }
+      } catch (e) {
+        console.log('Permit stats not available');
+      }
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const triggerPermitSync = async () => {
+    try {
+      setPermitSyncing(true);
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`${BACKEND_URL}/api/sync/permits`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ download: true, parse: true, link: true }),
+      });
+      
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || 'Failed to start permit sync');
+        setPermitSyncing(false);
+        return;
+      }
+      
+      // Poll for completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`${BACKEND_URL}/api/sync/permits/status`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (statusRes.ok) {
+            const data = await statusRes.json();
+            setPermitStats(data);
+            if (!data.inProgress) {
+              setPermitSyncing(false);
+              clearInterval(pollInterval);
+            }
+          }
+        } catch (e) {
+          clearInterval(pollInterval);
+          setPermitSyncing(false);
+        }
+      }, 3000);
+      
+      // Stop polling after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setPermitSyncing(false);
+      }, 5 * 60 * 1000);
+      
+    } catch (error) {
+      console.error('Error triggering permit sync:', error);
+      setPermitSyncing(false);
     }
   };
 
@@ -494,6 +572,82 @@ export default function DataManagement() {
                 </div>
               ))}
             </div>
+          </Card>
+
+          {/* Permit Sync Section */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                <h3 className="font-display text-lg font-semibold text-foreground">
+                  Building Permits Sync
+                </h3>
+              </div>
+              <Button 
+                onClick={triggerPermitSync} 
+                disabled={permitSyncing}
+                size="sm"
+              >
+                {permitSyncing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Sync Permits
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <p className="text-sm text-muted-foreground mb-4">
+              Downloads and parses building permits from Wellesley Town archive (2009-2025) and links them to MLS properties.
+            </p>
+
+            {permitStats ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <span className="text-sm text-muted-foreground">Total Permits</span>
+                    <span className="font-bold text-foreground">{permitStats.totalPermits?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <span className="text-sm text-muted-foreground">Linked to MLS</span>
+                    <span className="font-bold text-foreground">{permitStats.linkedToMLS?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <span className="text-sm text-muted-foreground">Match Rate</span>
+                    <span className="font-bold text-foreground">
+                      {permitStats.totalPermits > 0 
+                        ? Math.round((permitStats.linkedToMLS / permitStats.totalPermits) * 100) 
+                        : 0}%
+                    </span>
+                  </div>
+                </div>
+                
+                {permitStats.byYear && permitStats.byYear.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-2">Permits by Year</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {permitStats.byYear.slice(0, 10).map((y: any) => (
+                        <Badge key={y.year} variant="secondary">
+                          {y.year}: {y.count}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <FileText className="w-10 h-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Click "Sync Permits" to download and import building permits
+                </p>
+              </div>
+            )}
           </Card>
         </TabsContent>
 

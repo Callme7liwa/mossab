@@ -3,6 +3,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 const AUTO_SYNC_THRESHOLD_HOURS = 6;
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('authToken');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 interface SyncLog {
   id: number;
   status: string;
@@ -26,7 +31,9 @@ export function useSyncStatus() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/sync/status`);
+      const response = await fetch(`${BACKEND_URL}/api/sync/status`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) throw new Error("Failed to fetch sync status");
       const data = await response.json();
       setStatus(data);
@@ -45,14 +52,16 @@ export function useSyncStatus() {
     try {
       const response = await fetch(`${BACKEND_URL}/api/sync/quick`, {
         method: "POST",
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ strategy }),
       });
       if (!response.ok) throw new Error("Failed to start sync");
       
       // Poll for completion
       const pollInterval = setInterval(async () => {
-        const statusResponse = await fetch(`${BACKEND_URL}/api/sync/status`);
+        const statusResponse = await fetch(`${BACKEND_URL}/api/sync/status`, {
+          headers: getAuthHeaders(),
+        });
         const statusData = await statusResponse.json();
         
         // Check if a new sync completed (compare timestamps)
@@ -81,14 +90,16 @@ export function useSyncStatus() {
     try {
       const response = await fetch(`${BACKEND_URL}/api/sync`, {
         method: "POST",
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ strategy }),
       });
       if (!response.ok) throw new Error("Failed to start sync");
       
       // Poll for completion (longer timeout for full sync)
       const pollInterval = setInterval(async () => {
-        const statusResponse = await fetch(`${BACKEND_URL}/api/sync/status`);
+        const statusResponse = await fetch(`${BACKEND_URL}/api/sync/status`, {
+          headers: getAuthHeaders(),
+        });
         const statusData = await statusResponse.json();
         
         if (status?.lastSync?.completed_at !== statusData.lastSync?.completed_at) {

@@ -1,0 +1,9 @@
+{
+  "summary": {
+    "permits_rows": 1984,
+    "mls_rows": 2381,
+    "exact_matches": 1761,
+    "fuzzy_matches": 16,
+    "unmatched": 207
+  }
+}

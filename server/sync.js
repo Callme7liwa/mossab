@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import db from './db.js';
 
 const API_BASE = 'https://api.bridgedataoutput.com/api/v2/OData/shared_mlspin_0705dd4';
@@ -184,28 +185,41 @@ async function fullSync() {
   const syncId = logResult.lastInsertRowid;
 
   let totalSynced = 0;
-  const baseFilter = `PropertyType eq 'Residential' and PropertySubType eq 'Single Family Residence'`;
+  // Include all property types the client wants: Single Family, Condo, Multi-Family, Land
+  const PROPERTY_TYPES = [
+    { filter: "PropertySubType eq 'Single Family Residence'", name: 'Single Family' },
+    { filter: "PropertySubType eq 'Condominium'", name: 'Condo' },
+    { filter: "PropertySubType eq 'Multi Family'", name: 'Multi-Family' },
+    { filter: "PropertyType eq 'Land'", name: 'Land' },
+  ];
   const cityFilter = TOWNS.map(t => `City eq '${t}'`).join(' or ');
 
   try {
-    // Sync non-closed statuses (Active, Pending, etc.)
+    // Sync non-closed statuses (Active, Pending, etc.) - by property type
     for (const status of NON_CLOSED_STATUSES) {
       console.log(`\nSyncing ${status} properties...`);
-      const filter = `StandardStatus eq '${status}' and (${cityFilter}) and ${baseFilter}`;
-      const count = await syncWithFilter(filter, `All towns`);
-      totalSynced += count;
+      for (const propType of PROPERTY_TYPES) {
+        const filter = `StandardStatus eq '${status}' and (${cityFilter}) and ${propType.filter}`;
+        const count = await syncWithFilter(filter, `${propType.name}`);
+        totalSynced += count;
+      }
     }
 
-    // Sync Closed properties by year to avoid skip limits
-    console.log(`\nSyncing Closed properties (last ${CLOSED_YEARS_TO_SYNC} years)...`);
+    // Sync Closed properties by TOWN, YEAR, and PROPERTY TYPE to avoid skip limits
+    console.log(`\nSyncing Closed properties (last ${CLOSED_YEARS_TO_SYNC} years) by town & type...`);
     const currentYear = new Date().getFullYear();
     
     for (let year = currentYear; year >= currentYear - CLOSED_YEARS_TO_SYNC; year--) {
-      const startDate = `${year}-01-01`;
-      const endDate = `${year}-12-31`;
-      const filter = `StandardStatus eq 'Closed' and (${cityFilter}) and ${baseFilter} and CloseDate ge ${startDate} and CloseDate le ${endDate}`;
-      const count = await syncWithFilter(filter, `Year ${year}`);
-      totalSynced += count;
+      console.log(`\n📅 Year ${year}:`);
+      for (const town of TOWNS) {
+        for (const propType of PROPERTY_TYPES) {
+          const startDate = `${year}-01-01`;
+          const endDate = `${year}-12-31`;
+          const filter = `StandardStatus eq 'Closed' and City eq '${town}' and ${propType.filter} and CloseDate ge ${startDate} and CloseDate le ${endDate}`;
+          const count = await syncWithFilter(filter, `${town} ${propType.name}`);
+          totalSynced += count;
+        }
+      }
     }
 
     // Update sync log

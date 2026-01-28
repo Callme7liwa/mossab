@@ -55,6 +55,38 @@ db.exec(`
     properties_synced INTEGER DEFAULT 0,
     error TEXT
   );
+
+  -- Building Permits table for New Construction Tracker
+  CREATE TABLE IF NOT EXISTS building_permits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    record_number TEXT UNIQUE,
+    record_type TEXT,
+    permit_type TEXT,  -- 'Residential' or 'Commercial'
+    address TEXT NOT NULL,
+    address_normalized TEXT,
+    applicant_name TEXT,
+    applicant_phone TEXT,
+    date_submitted TEXT,
+    record_status TEXT,
+    mbl TEXT,
+    owner_name TEXT,
+    year_built INTEGER,
+    zoning TEXT,
+    lot_area TEXT,
+    work_type TEXT,
+    description TEXT,
+    estimated_cost REAL,
+    year INTEGER,
+    linked_property_id TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (linked_property_id) REFERENCES properties(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_permits_address ON building_permits(address_normalized);
+  CREATE INDEX IF NOT EXISTS idx_permits_year ON building_permits(year);
+  CREATE INDEX IF NOT EXISTS idx_permits_work_type ON building_permits(work_type);
+  CREATE INDEX IF NOT EXISTS idx_permits_linked_property ON building_permits(linked_property_id);
 `);
 
 // Add addressKey column if it doesn't exist (for existing databases)

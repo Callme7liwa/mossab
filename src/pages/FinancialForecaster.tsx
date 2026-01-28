@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { InvestmentCalculator } from "@/components/calculator/InvestmentCalculator";
 import { LastUpdated } from "@/components/dashboard/LastUpdated";
 import { useProperties } from "@/hooks/useProperties";
+import ReportDisclaimer from "@/components/ui/ReportDisclaimer";
 import {
   AreaChart,
   Area,
@@ -185,6 +186,7 @@ export default function FinancialForecaster() {
           </ResponsiveContainer>
         </div>
       </motion.div>
+      <ReportDisclaimer />
     </div>
   );
 }

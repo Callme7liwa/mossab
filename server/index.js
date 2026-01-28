@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { spawn } from 'child_process';
 import db from './db.js';
 import authRoutes, { requireAuth, requireAdmin } from './auth-routes.js';
+import permitsRoutes from './permits.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,24 +12,40 @@ const PORT = process.env.PORT || 3001;
 // Sync lock to prevent concurrent syncs
 let syncInProgress = false;
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://estate.intellisoft.software';
-app.use(cors({ origin: CORS_ORIGIN }));
-app.use(express.json());
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:8080';
+app.use(cors({ origin: [CORS_ORIGIN, 'http://localhost:5173', 'http://localhost:3000', 'https://estate.intellisoft.software'] }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Auth routes (public)
 app.use('/api/auth', authRoutes);
 
+// Permits / New Construction routes (protected)
+app.use('/api/permits', requireAuth, permitsRoutes);
+
 // Get properties with filters
-app.get('/api/properties', (req, res) => {
+app.get('/api/properties', requireAuth, (req, res) => {
   try {
-    const { status, city, minPrice, maxPrice, minBeds, minBaths, limit = 1000 } = req.query;
+    const { status, city, minPrice, maxPrice, minBeds, minBaths, limit = 1000, search, propertyType, timeframe } = req.query;
 
     let sql = 'SELECT * FROM properties WHERE 1=1';
     const params = [];
 
+    // Search by address or MLS ID
+    if (search) {
+      sql += ' AND (address LIKE ? OR mlsId LIKE ? OR id LIKE ?)';
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+
     if (status) {
-      // Handle multiple statuses (comma-separated)
-      const statuses = status.split(',').map(s => s.trim());
+      // Handle multiple statuses (comma-separated string or array)
+      let statuses;
+      if (Array.isArray(status)) {
+        statuses = status;
+      } else {
+        statuses = status.split(',').map(s => s.trim());
+      }
       sql += ` AND status IN (${statuses.map(() => '?').join(',')})`;
       params.push(...statuses);
     }
@@ -55,6 +73,22 @@ app.get('/api/properties', (req, res) => {
     if (minBaths) {
       sql += ' AND baths >= ?';
       params.push(parseFloat(minBaths));
+    }
+
+    if (propertyType && propertyType !== 'All') {
+      sql += ' AND propertyType = ?';
+      params.push(propertyType);
+    }
+    
+    if (timeframe) {
+      // timeframe expected like '3m','6m','12m','24m'
+      const months = parseInt(timeframe.replace(/[^0-9]/g, '')) || 12;
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - months);
+      const cutoffIso = cutoff.toISOString().slice(0,10);
+      // Use listDate or closeDate as activity date
+      sql += ` AND (COALESCE(listDate, closeDate) >= ?)`;
+      params.push(cutoffIso);
     }
 
     sql += ' ORDER BY listDate DESC';
@@ -90,7 +124,7 @@ app.get('/api/properties', (req, res) => {
 });
 
 // Get single property by ID
-app.get('/api/properties/:id', (req, res) => {
+app.get('/api/properties/:id', requireAuth, (req, res) => {
   try {
     const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
     
@@ -117,7 +151,7 @@ app.get('/api/properties/:id', (req, res) => {
 });
 
 // Get listing history for a property (all listings at same address)
-app.get('/api/properties/:id/history', (req, res) => {
+app.get('/api/properties/:id/history', requireAuth, (req, res) => {
   try {
     // First get the property to find its addressKey
     const property = db.prepare('SELECT * FROM properties WHERE id = ?').get(req.params.id);
@@ -150,7 +184,7 @@ app.get('/api/properties/:id/history', (req, res) => {
 });
 
 // Get properties with multiple listings (potential flips, re-lists)
-app.get('/api/analytics/multiple-listings', (req, res) => {
+app.get('/api/analytics/multiple-listings', requireAuth, requireAdmin, (req, res) => {
   try {
     const properties = db.prepare(`
       SELECT 
@@ -189,8 +223,97 @@ app.get('/api/analytics/multiple-listings', (req, res) => {
   }
 });
 
+// Get enhanced KPIs with median calculations and advanced metrics
+app.get('/api/kpis', requireAuth, (req, res) => {
+  try {
+    const { status = 'Active', city, propertyType, timeframe } = req.query;
+
+    let sql = 'SELECT * FROM properties WHERE 1=1';
+    const params = [];
+
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim());
+      sql += ` AND status IN (${statuses.map(() => '?').join(',')})`;
+      params.push(...statuses);
+    }
+
+    if (city && city !== 'All') {
+      sql += ' AND city = ?';
+      params.push(city);
+    }
+
+    if (propertyType && propertyType !== 'All') {
+      sql += ' AND propertyType = ?';
+      params.push(propertyType);
+    }
+
+    if (timeframe) {
+      const months = parseInt(timeframe.replace(/[^0-9]/g, '')) || 12;
+      const cutoff = new Date();
+      cutoff.setMonth(cutoff.getMonth() - months);
+      const cutoffIso = cutoff.toISOString().slice(0,10);
+      sql += ` AND (COALESCE(listDate, closeDate) >= ?)`;
+      params.push(cutoffIso);
+    }
+
+    const properties = db.prepare(sql).all(...params);
+    const validProperties = properties.filter(p => p.price > 0);
+
+    // Helper function to calculate median
+    const getMedian = (arr) => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    };
+
+    // Calculate primary KPIs
+    const prices = validProperties.map(p => p.price);
+    const pricePerSqft = validProperties.map(p => p.price / (p.sqft || 1)).filter(v => !isNaN(v) && isFinite(v));
+    const pricePerLot = validProperties.map(p => p.price / (p.lotSize || 1)).filter(v => !isNaN(v) && isFinite(v));
+    const doms = validProperties.map(p => p.dom || 0).filter(d => d >= 0);
+
+    // Calculate secondary KPIs (last 30 days)
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+    const last30DaysIso = last30Days.toISOString().slice(0,10);
+    
+    const newListings = properties.filter(p => p.listDate >= last30DaysIso).length;
+    const soldProperties = properties.filter(p => p.status === 'Closed');
+    const soldDOM = soldProperties.map(p => p.dom || 0).filter(d => d >= 0);
+
+    // Calculate price reductions (simplified - properties with DOM > 60 days)
+    const priceReductions = validProperties.filter(p => (p.dom || 0) > 60).length;
+    const priceReductionPercent = validProperties.length > 0 ? (priceReductions / validProperties.length * 100) : 0;
+
+    const kpis = {
+      // Primary KPIs
+      medianListingPrice: Math.round(getMedian(prices)),
+      pricePerLivingAreaSqft: Math.round(getMedian(pricePerSqft)),
+      pricePerLotSqft: Math.round(getMedian(pricePerLot)),
+      activeInventory: validProperties.length,
+      avgDaysOnMarket: Math.round(getMedian(doms)),
+      
+      // Secondary KPIs  
+      newListings30Days: newListings,
+      absorptionRate: soldProperties.length / (validProperties.length || 1) * 100,
+      priceReductionPercent: Math.round(priceReductionPercent),
+      medianDOMSold: Math.round(getMedian(soldDOM)),
+      
+      // Additional context
+      totalProperties: properties.length,
+      filters: { status, city, propertyType, timeframe }
+    };
+
+    res.json(kpis);
+  } catch (error) {
+    console.error('Error fetching KPIs:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get statistics summary
-app.get('/api/stats', (req, res) => {
+app.get('/api/stats', requireAuth, requireAdmin, (req, res) => {
   try {
     const { status, city } = req.query;
 
@@ -329,6 +452,74 @@ app.post('/api/sync/quick', requireAuth, requireAdmin, async (req, res) => {
   } catch (error) {
     syncInProgress = false;
     console.error('Error starting quick sync:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Trigger permit sync from Wellesley archive (admin only)
+let permitSyncInProgress = false;
+
+app.post('/api/sync/permits', requireAuth, requireAdmin, async (req, res) => {
+  if (permitSyncInProgress) {
+    return res.status(409).json({ error: 'Permit sync already in progress. Please wait for it to complete.' });
+  }
+
+  try {
+    const { download = true, parse = true, link = true } = req.body;
+    permitSyncInProgress = true;
+    console.log('\n🔒 Permit sync lock acquired');
+    
+    // Build arguments based on options
+    const args = ['permit-sync-v2.js'];
+    if (download) args.push('--download');
+    if (parse) args.push('--parse', '--import');
+    if (link) args.push('--link');
+    
+    // Run permit sync in background
+    const syncProcess = spawn('node', args, {
+      cwd: import.meta.dirname,
+      detached: false,
+      stdio: 'inherit'
+    });
+
+    // Release lock when process exits
+    syncProcess.on('exit', (code) => {
+      permitSyncInProgress = false;
+      console.log(`🔓 Permit sync lock released (exit code: ${code})\n`);
+    });
+
+    res.json({ 
+      message: 'Permit sync started in background', 
+      options: { download, parse, link }
+    });
+  } catch (error) {
+    permitSyncInProgress = false;
+    console.error('Error starting permit sync:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get permit sync status
+app.get('/api/sync/permits/status', requireAuth, (req, res) => {
+  try {
+    const total = db.prepare('SELECT COUNT(*) as count FROM permits').get();
+    const linked = db.prepare('SELECT COUNT(DISTINCT permit_id) as count FROM permit_mls_matches').get();
+    const byYear = db.prepare(`
+      SELECT year, COUNT(*) as count 
+      FROM permits 
+      WHERE year IS NOT NULL
+      GROUP BY year 
+      ORDER BY year DESC
+    `).all();
+    
+    res.json({
+      inProgress: permitSyncInProgress,
+      totalPermits: total.count,
+      linkedToMLS: linked.count,
+      byYear
+    });
+  } catch (error) {
+    console.error('Error fetching permit sync status:', error);
     res.status(500).json({ error: error.message });
   }
 });

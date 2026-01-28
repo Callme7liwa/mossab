@@ -1,0 +1,36 @@
+[
+  {
+    "Record #": "BP-2024-001",
+    "Full Address": "123 Main St Wellesley MA 02481",
+    "Date Submitted": "2024-01-15",
+    "Record Status": "Active",
+    "Type of Project": "Development",
+    "Type of Work": "New Construction",
+    "Brief Description of Proposed Work": "New single-family home construction",
+    "Total Estimated Building Cost": 1500000,
+    "Demolition: Total Estimated Cost": 50000,
+    "Demolition: Date Submitted": "2024-01-10",
+    "Applicant Name": "ABC Builders",
+    "Owner Name": "John Smith",
+    "Lot Area": 15000,
+    "Zoning": "RS",
+    "Year Built": null
+  },
+  {
+    "Record #": "BP-2024-002",
+    "Full Address": "456 Oak Ave Wellesley MA 02482",
+    "Date Submitted": "2024-02-20",
+    "Record Status": "Complete",
+    "Type of Project": "Development",
+    "Type of Work": "New Construction",
+    "Brief Description of Proposed Work": "Tear-down and rebuild",
+    "Total Estimated Building Cost": 2200000,
+    "Demolition: Total Estimated Cost": 75000,
+    "Demolition: Date Submitted": "2024-02-15",
+    "Applicant Name": "XYZ Construction",
+    "Owner Name": "Jane Doe",
+    "Lot Area": 12500,
+    "Zoning": "RB",
+    "Year Built": 1955
+  }
+]

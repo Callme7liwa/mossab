@@ -5,6 +5,7 @@ import { KPICard } from "@/components/dashboard/KPICard";
 import { PriceTrendChart } from "@/components/dashboard/PriceTrendChart";
 import { MapPlaceholder } from "@/components/dashboard/MapPlaceholder";
 import { useProperties } from "@/hooks/useProperties";
+import ReportDisclaimer from "@/components/ui/ReportDisclaimer";
 import {
   BarChart,
   Bar,
@@ -23,6 +24,10 @@ const CHART_COLORS = [
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
   "hsl(var(--primary))",
+];
+
+const METROWEST_TOWNS = [
+  'Wellesley', 'Weston', 'Needham', 'Newton', 'Natick', 'Westwood', 'Dover'
 ];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -88,6 +93,9 @@ export default function MarketOverview() {
             </h1>
             <p className="text-muted-foreground">
               Real-time insights into the residential real estate market
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              MetroWest Towns: {METROWEST_TOWNS.join(', ')}
             </p>
           </div>
         </div>
@@ -194,6 +202,7 @@ export default function MarketOverview() {
           )}
         </div>
       </motion.div>
+      <ReportDisclaimer />
     </div>
   );
 }

@@ -14,18 +14,29 @@ function generateToken() {
 
 // Middleware to check if user is authenticated
 export function requireAuth(req, res, next) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace('Bearer ', '');
+  
+  console.log(`[Auth] ${req.method} ${req.path} - Token: ${token ? token.substring(0, 10) + '...' : 'NONE'}`);
   
   if (!token) {
+    console.log('[Auth] REJECTED: No token provided');
     return res.status(401).json({ error: 'Authentication required' });
   }
 
   const session = sessions.get(token);
-  if (!session || session.expiresAt < Date.now()) {
+  if (!session) {
+    console.log('[Auth] REJECTED: Token not found in sessions. Active sessions:', sessions.size);
+    return res.status(401).json({ error: 'Invalid token - please login again' });
+  }
+  
+  if (session.expiresAt < Date.now()) {
+    console.log('[Auth] REJECTED: Session expired');
     sessions.delete(token);
-    return res.status(401).json({ error: 'Session expired' });
+    return res.status(401).json({ error: 'Session expired - please login again' });
   }
 
+  console.log('[Auth] OK: User', session.user.email);
   req.user = session.user;
   next();
 }

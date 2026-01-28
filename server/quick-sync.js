@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import db from './db.js';
 
 // Quick sync - only Active/Pending/Under Contract/Withdrawn

@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import StickyFilterBar from "@/components/ui/StickyFilterBar";
 import { LastUpdated } from "@/components/dashboard/LastUpdated";
 import { useProperties } from "@/hooks/useProperties";
+import ReportDisclaimer from "@/components/ui/ReportDisclaimer";
 import {
   BarChart,
   Bar,
@@ -50,10 +52,14 @@ interface NeighborhoodStats {
 
 export default function NeighborhoodAnalysis() {
   // Show Active listings for current neighborhood analysis
+  const [filters, setFilters] = useState({ propertyType: 'All', town: 'All', status: 'Active', timeframe: '12m' });
   const { properties, loading, refetch, lastUpdated } = useProperties({ 
     top: 500,
-    filter: "StandardStatus eq 'Active'"
-  });
+    propertyType: filters.propertyType === 'All' ? undefined : filters.propertyType,
+    town: filters.town === 'All' ? undefined : filters.town,
+    status: filters.status === 'All' ? undefined : filters.status,
+    timeframe: filters.timeframe,
+  } as any);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string | null>(null);
 
   const neighborhoods = useMemo<NeighborhoodStats[]>(() => {
@@ -149,7 +155,7 @@ export default function NeighborhoodAnalysis() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">
               Neighborhood Analysis
@@ -158,7 +164,17 @@ export default function NeighborhoodAnalysis() {
               Deep dive into market stats by neighborhood
             </p>
           </div>
-          <LastUpdated timestamp={lastUpdated} loading={loading} onRefresh={refetch} />
+          <div className="flex items-center gap-3">
+            <StickyFilterBar
+              towns={Array.from(new Set(properties.map(p => p.city || 'Wellesley')))}
+              propertyType={filters.propertyType}
+              town={filters.town}
+              status={filters.status}
+              timeframe={filters.timeframe}
+              onChange={(vals) => setFilters(prev => ({ ...prev, ...vals }))}
+            />
+            <LastUpdated timestamp={lastUpdated} loading={loading} onRefresh={refetch} />
+          </div>
         </div>
       </motion.div>
 
@@ -515,6 +531,7 @@ export default function NeighborhoodAnalysis() {
           </motion.div>
         </>
       )}
+      <ReportDisclaimer />
     </div>
   );
 }
